@@ -19,8 +19,14 @@ export function createApp() {
   app.use(express.json({ limit: '256kb' }));
   app.use(express.urlencoded({ extended: true }));
 
-  // CORS restricted to the approved frontend origin (proposal section 8).
-  const allow = [config.frontendOrigin];
+  // CORS restricted to the approved frontend origin(s) (proposal section 8).
+  // FRONTEND_ORIGIN may be a single origin or a comma-separated list, e.g.
+  // "https://app.vercel.app,https://your-app.onrender.com" when the frontend is
+  // hosted separately from the backend.
+  const allow = config.frontendOrigin
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
   app.use(
     cors({
       origin(origin, cb) {
