@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Working Hours</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <div id="topbar"></div>
+
+  <main class="container">
+    <h1 class="section-title mt-0">Working hours</h1>
+    <div id="alert"></div>
+
+    <div class="card">
+      <h2>Set your weekly availability</h2>
+      <p class="sub">Times use a 24-hour clock (HH:MM). Leave a day blank to mark it as a day off. An optional break (e.g. lunch) is excluded from available slots.</p>
+      <div id="daysWrap" class="stack mt-4"></div>
+      <div class="alert info" style="font-size:0.82rem;margin-top:16px">
+        Slots are generated per service duration within these hours, minus any breaks and existing active bookings.
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="/js/availability.js"></script>
+</body>
+</html>

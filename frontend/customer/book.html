@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Book an Appointment</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <div id="topbar"></div>
+
+  <main class="container">
+    <h1 class="section-title">Book an appointment</h1>
+
+    <ol class="steps">
+      <li class="active">Service</li>
+      <li>Date</li>
+      <li>Time</li>
+      <li>Confirm</li>
+    </ol>
+
+    <div id="alert"></div>
+
+    <div class="card">
+      <h2>Choose a service</h2>
+      <p class="sub">Select the service you'd like to book.</p>
+      <div class="form-grid">
+        <div class="field">
+          <label for="service">Service</label>
+          <select id="service"><option value="">Loading services…</option></select>
+        </div>
+        <div class="field">
+          <label for="provider">Provider</label>
+          <select id="provider"><option value="">Loading providers…</option></select>
+        </div>
+        <div id="serviceDetail" class="muted" style="font-size:0.88rem"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Pick a date &amp; time</h2>
+      <p class="sub">Available slots are based on the provider's working hours and existing bookings.</p>
+      <div class="field" style="max-width:240px">
+        <label for="date">Date</label>
+        <input id="date" type="date" />
+      </div>
+      <div id="slotsWrap" class="mt-4 hidden">
+        <div class="between">
+          <strong>Available times</strong>
+          <span id="slotMeta" class="muted" style="font-size:0.82rem"></span>
+        </div>
+        <div id="slots" class="slots mt-2"></div>
+      </div>
+      <div id="noSlots" class="empty hidden">
+        <div class="big">🗓️</div>
+        <div>No available slots for this date. Try another day.</div>
+      </div>
+    </div>
+
+    <div class="card hidden" id="confirmCard">
+      <h2>Confirm your booking</h2>
+      <p class="sub" id="confirmSummary"></p>
+      <div class="field">
+        <label for="note">Note for the provider (optional)</label>
+        <textarea id="note" rows="3" maxlength="500" placeholder="Anything we should know?"></textarea>
+      </div>
+      <div class="mt-4">
+        <button class="btn" id="bookBtn">Confirm booking</button>
+        <button class="btn secondary" id="changeBtn">Change time</button>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="/js/booking.js"></script>
+</body>
+</html>

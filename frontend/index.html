@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Appointment Booking System</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <div id="topbar"></div>
+
+  <main class="auth-wrap">
+    <div class="card auth-card">
+      <h1>Online Appointment Booking</h1>
+      <p class="tag">A simple, reliable way to schedule and manage service appointments.</p>
+
+      <div class="tabs" role="tablist">
+        <button id="tabSignin" class="active" type="button">Sign in</button>
+        <button id="tabSignup" type="button">Create account</button>
+      </div>
+
+      <!-- Sign in -->
+      <form id="signinForm" class="form-grid" novalidate>
+        <div class="field">
+          <label for="siEmail">Email</label>
+          <input id="siEmail" type="email" autocomplete="email" required />
+        </div>
+        <div class="field">
+          <label for="siPassword">Password</label>
+          <input id="siPassword" type="password" autocomplete="current-password" required />
+        </div>
+        <button class="btn" type="submit" id="signinBtn">Sign in</button>
+      </form>
+
+      <!-- Sign up -->
+      <form id="signupForm" class="form-grid hidden" novalidate>
+        <div class="field">
+          <label for="suName">Full name</label>
+          <input id="suName" type="text" autocomplete="name" required />
+        </div>
+        <div class="field">
+          <label for="suEmail">Email</label>
+          <input id="suEmail" type="email" autocomplete="email" required />
+        </div>
+        <div class="field">
+          <label for="suPassword">Password</label>
+          <input id="suPassword" type="password" autocomplete="new-password" minlength="6" required />
+          <div class="hint">At least 6 characters.</div>
+        </div>
+        <button class="btn" type="submit" id="signupBtn">Create account</button>
+      </form>
+
+      <div id="authAlert"></div>
+    </div>
+  </main>
+
+  <script type="module" src="/js/index.js"></script>
+</body>
+</html>

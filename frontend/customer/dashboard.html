@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Appointments</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <div id="topbar"></div>
+
+  <main class="container">
+    <div class="between">
+      <h1 class="section-title mt-0">My appointments</h1>
+      <a class="btn" href="/customer/book.html">Book new</a>
+    </div>
+
+    <div id="alert"></div>
+
+    <div class="card">
+      <h2>Upcoming</h2>
+      <p class="sub">Your pending, confirmed and completed bookings.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Reference</th><th>Service</th><th>Provider</th><th>Date &amp; time</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody id="upcomingBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>History</h2>
+      <p class="sub">Past and cancelled appointments.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Reference</th><th>Service</th><th>Provider</th><th>Date &amp; time</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody id="pastBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="/js/customer-dashboard.js"></script>
+</body>
+</html>

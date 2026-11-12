@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manage Services</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <div id="topbar"></div>
+
+  <main class="container">
+    <h1 class="section-title mt-0">Services</h1>
+    <div id="alert"></div>
+
+    <div class="card">
+      <h2 id="formTitle">Add a service</h2>
+      <p class="sub">Define what customers can book. Duration is in minutes.</p>
+      <form id="serviceForm" class="form-grid">
+        <input type="hidden" id="svcId" />
+        <div class="grid-2">
+          <div class="field">
+            <label for="svcName">Name</label>
+            <input id="svcName" type="text" maxlength="120" required placeholder="e.g. Haircut" />
+          </div>
+          <div class="field">
+            <label for="svcDuration">Duration (minutes)</label>
+            <input id="svcDuration" type="number" min="1" max="600" required placeholder="30" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="svcDescription">Description</label>
+          <textarea id="svcDescription" rows="2" placeholder="Short description shown to customers"></textarea>
+        </div>
+        <div class="field">
+          <label><input type="checkbox" id="svcActive" checked /> Active (available to book)</label>
+        </div>
+        <div class="between">
+          <button class="btn" type="submit" id="saveBtn">Save service</button>
+          <button class="btn ghost" type="button" id="resetBtn">Reset form</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>All services</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Duration</th><th>Active</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="svcBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="/js/services.js"></script>
+</body>
+</html>
