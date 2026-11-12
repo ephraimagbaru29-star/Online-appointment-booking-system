@@ -8,22 +8,26 @@ const router = Router();
 const MIN_PASSWORD = 6;
 
 function cleanCredentials(body) {
-  const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
-  const password = typeof body?.password === 'string' ? body.password : '';
+  const email     = typeof body?.email     === 'string' ? body.email.trim().toLowerCase() : '';
+  const password  = typeof body?.password  === 'string' ? body.password : '';
   const full_name = typeof body?.full_name === 'string' ? body.full_name.trim() : '';
+  // role is optional; defaults to 'customer'. Only 'customer' and 'staff' are valid.
+  const rawRole = typeof body?.role === 'string' ? body.role.trim().toLowerCase() : 'customer';
+  const role = rawRole === 'staff' ? 'staff' : 'customer';
   if (!isValidEmail(email)) throw httpError(400, 'A valid email is required.');
   if (!password || password.length < MIN_PASSWORD) {
     throw httpError(400, `Password must be at least ${MIN_PASSWORD} characters.`);
   }
-  return { email, password, full_name };
+  return { email, password, full_name, role };
 }
 
 // POST /api/auth/signup — creates a confirmed user (server-side, via the
 // service role) and returns a session token. The handle_new_user trigger
-// creates the customer profile automatically.
+// creates the customer profile automatically; we then update the role if
+// 'staff' was requested.
 router.post('/signup', asyncHandler(async (req, res) => {
   ensureSupabase();
-  const { email, password, full_name } = cleanCredentials(req.body);
+  const { email, password, full_name, role } = cleanCredentials(req.body);
 
   // Create the user (email confirmed) server-side.
   const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
@@ -39,13 +43,29 @@ router.post('/signup', asyncHandler(async (req, res) => {
     throw httpError(400, createErr.message);
   }
 
+  // The handle_new_user trigger creates the profile as 'customer' by default.
+  // If a different role was requested, update it now.
+  if (role !== 'customer') {
+    await supabaseAdmin
+      .from('profiles')
+      .update({ role, full_name })
+      .eq('id', created.user.id);
+  } else {
+    // Still ensure full_name is saved (trigger may have used empty string).
+    if (full_name) {
+      await supabaseAdmin
+        .from('profiles')
+        .update({ full_name })
+        .eq('id', created.user.id);
+    }
+  }
+
   // Sign them in to obtain a JWT to return to the client.
   const { data: session, error: signInErr } = await supabaseAuth.auth.signInWithPassword({
     email,
     password,
   });
   if (signInErr || !session?.session) {
-    // Account was created; return success and ask the user to sign in.
     return ok(res, { created: true, message: 'Account created. Please sign in.' }, 201);
   }
 

@@ -2,14 +2,13 @@
 import { api, setSession, getToken, getProfile, clearSession, loadConfig } from './api.js';
 import { toast, redirect, renderNav } from './ui.js';
 
-// Sign up a new customer account.
-export async function signup({ full_name, email, password }) {
-  const data = await api.post('/auth/signup', { full_name, email, password });
+// Sign up a new account. role can be 'customer' (default) or 'staff'.
+export async function signup({ full_name, email, password, role = 'customer' }) {
+  const data = await api.post('/auth/signup', { full_name, email, password, role });
   if (data.access_token) {
     setSession({ access_token: data.access_token, profile: data.profile });
     return data;
   }
-  // Account created but no session returned.
   return data;
 }
 

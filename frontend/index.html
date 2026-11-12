@@ -6,6 +6,23 @@
   <title>Appointment Booking System</title>
   <link rel="stylesheet" href="/css/styles.css" />
   <script src="/js/config.js"></script>
+  <style>
+    .role-select { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+    .role-btn {
+      border: 2px solid var(--border);
+      background: var(--surface);
+      border-radius: 10px;
+      padding: 14px 10px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+    .role-btn:hover { border-color: var(--primary); background: var(--primary-soft); }
+    .role-btn.selected { border-color: var(--primary); background: var(--primary-soft); }
+    .role-btn .icon { font-size: 1.6rem; margin-bottom: 4px; }
+    .role-btn .label { font-weight: 700; font-size: 0.92rem; color: var(--text); }
+    .role-btn .desc { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+  </style>
 </head>
 <body>
   <div id="topbar"></div>
@@ -48,6 +65,24 @@
           <input id="suPassword" type="password" autocomplete="new-password" minlength="6" required />
           <div class="hint">At least 6 characters.</div>
         </div>
+
+        <!-- Role selector -->
+        <div class="field">
+          <label>I am signing up as</label>
+          <div class="role-select">
+            <button type="button" class="role-btn selected" id="roleCustomer" data-role="customer">
+              <div class="icon">🙋</div>
+              <div class="label">Customer</div>
+              <div class="desc">Book appointments</div>
+            </button>
+            <button type="button" class="role-btn" id="roleStaff" data-role="staff">
+              <div class="icon">🩺</div>
+              <div class="label">Staff / Provider</div>
+              <div class="desc">Manage bookings</div>
+            </button>
+          </div>
+        </div>
+
         <button class="btn" type="submit" id="signupBtn">Create account</button>
       </form>
 
