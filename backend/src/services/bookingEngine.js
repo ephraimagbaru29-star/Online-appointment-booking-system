@@ -85,12 +85,13 @@ export async function getAvailableSlots({ providerId, serviceId, date }) {
   const windows = await getAvailability(provider, date);
   if (!windows.length) return []; // provider does not work this weekday
 
-  // Pull active appointments for this provider around that calendar day
-  // (a ±1 day window to be safe across the schedule time zone / UTC boundary).
+  // Pull active appointments for this provider around that calendar day.
+  // combineDateAndTime returns a string — wrap in new Date() before arithmetic.
   const dayStartISO = combineDateAndTime(date, '00:00');
-  const dayEnd = new Date(new Date(dayStartISO).getTime() + 24 * 60 * 60 * 1000);
-  const fromISO = new Date(dayStartISO.getTime() - 24 * 60 * 60 * 1000).toISOString();
-  const toISO = new Date(dayEnd.getTime() + 24 * 60 * 60 * 1000).toISOString();
+  if (!dayStartISO) throw httpError(500, 'Failed to compute day start time.');
+  const dayStartMs  = new Date(dayStartISO).getTime();
+  const fromISO = new Date(dayStartMs - 24 * 60 * 60 * 1000).toISOString();
+  const toISO   = new Date(dayStartMs + 48 * 60 * 60 * 1000).toISOString();
 
   const { data: appts, error } = await supabaseAdmin
     .from('appointments')
@@ -106,17 +107,34 @@ export async function getAvailableSlots({ providerId, serviceId, date }) {
   const nowMs = Date.now();
   const slots = [];
 
+  // Work in whole seconds to avoid floating-point drift when duration_minutes
+  // is a decimal (e.g. 30.5 min = 1830 sec). All window values are already
+  // whole-minute integers (parseHHMM returns minutes), so convert once.
+  const durationSec = Math.round(duration * 60); // e.g. 30.5 min → 1830 sec
+
   for (const w of windows) {
     if (w.start == null || w.end == null || w.end <= w.start) continue;
-    // Generate back-to-back candidate slots stepping by the service duration.
-    for (let s = w.start; s + duration <= w.end; s += duration) {
-      const e = s + duration;
 
-      // Exclude slots that overlap a break period (half-open intervals).
-      if (w.breaks.some((b) => overlaps(s, e, b.start, b.end))) continue;
+    const windowStartSec = w.start * 60; // minutes → seconds since midnight
+    const windowEndSec   = w.end   * 60;
+    const breaksSec = w.breaks.map((b) => ({
+      start: b.start * 60,
+      end:   b.end   * 60,
+    }));
 
-      const startISO = combineDateAndTime(date, minutesToHHMM(s));
-      const endISO = combineDateAndTime(date, minutesToHHMM(e));
+    // Step through the window in durationSec increments.
+    for (let sSec = windowStartSec; sSec + durationSec <= windowEndSec; sSec += durationSec) {
+      const eSec = sSec + durationSec;
+
+      // Exclude slots that overlap a break period.
+      if (breaksSec.some((b) => sSec < b.end && b.start < eSec)) continue;
+
+      // Convert back to HH:MM for combineDateAndTime.
+      const startHHMM = minutesToHHMM(Math.floor(sSec / 60));
+      const endHHMM   = minutesToHHMM(Math.floor(eSec / 60));
+
+      const startISO = combineDateAndTime(date, startHHMM);
+      const endISO   = combineDateAndTime(date, endHHMM);
       if (!startISO || !endISO) continue;
 
       // No booking in the past.
@@ -129,10 +147,10 @@ export async function getAvailableSlots({ providerId, serviceId, date }) {
       if (clash) continue;
 
       slots.push({
-        start: startISO,
-        end: endISO,
-        start_time: minutesToHHMM(s),
-        end_time: minutesToHHMM(e),
+        start:      startISO,
+        end:        endISO,
+        start_time: startHHMM,
+        end_time:   endHHMM,
         service_id: service.id,
         provider_id: provider,
       });
