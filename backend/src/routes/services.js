@@ -6,17 +6,22 @@ import { asyncHandler, ok, httpError } from '../utils/http.js';
 const router = Router();
 
 // Sanitise + validate a service payload.
+// duration_minutes is now a decimal (e.g. 30.5 = 30 min 30 sec).
+// Max is 1440 (24 hours).
 function cleanService(body) {
-  const name = typeof body?.name === 'string' ? body.name.trim() : '';
+  const name        = typeof body?.name        === 'string' ? body.name.trim()        : '';
   const description = typeof body?.description === 'string' ? body.description.trim() : null;
-  const duration = Number(body?.duration_minutes);
-  const active = body?.active === undefined ? true : Boolean(body.active);
+  const duration    = Number(body?.duration_minutes);
+  const active      = body?.active === undefined ? true : Boolean(body.active);
+
   if (!name) throw httpError(400, 'Service name is required.');
   if (name.length > 120) throw httpError(400, 'Service name is too long.');
-  if (!Number.isFinite(duration) || duration <= 0 || duration > 600) {
-    throw httpError(400, 'duration_minutes must be a positive number (max 600).');
+  if (!Number.isFinite(duration) || duration <= 0 || duration > 1440) {
+    throw httpError(400, 'duration_minutes must be greater than 0 and no more than 1440 (24 hours).');
   }
-  return { name, description, duration_minutes: Math.round(duration), active };
+  // Round to nearest second (4 decimal places) to avoid floating-point noise.
+  const rounded = Math.round(duration * 60) / 60;
+  return { name, description, duration_minutes: rounded, active };
 }
 
 // GET /api/services — active services for customers. Staff may pass ?all=true
