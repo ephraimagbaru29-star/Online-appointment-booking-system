@@ -6,20 +6,106 @@
   <title>Working Hours</title>
   <link rel="stylesheet" href="/css/styles.css" />
   <script src="/js/config.js"></script>
+  <style>
+    /* AM/PM time picker */
+    .time-picker {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .time-picker select {
+      padding: 9px 6px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.92rem;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      flex: 1;
+      min-width: 0;
+    }
+    .time-picker select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-soft);
+    }
+    .time-picker .sep {
+      font-weight: 700;
+      color: var(--muted);
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .time-picker .ampm-sel {
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .day-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    .day-card.has-hours { border-left: 3px solid var(--primary); }
+    .day-card .day-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .day-card .day-name { font-weight: 700; font-size: 1rem; }
+    .time-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 10px;
+    }
+    @media (max-width: 520px) { .time-row { grid-template-columns: 1fr; } }
+    .time-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: var(--text);
+    }
+    .break-section {
+      border-top: 1px dashed var(--border);
+      padding-top: 10px;
+      margin-top: 4px;
+    }
+    .break-label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .day-footer {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .day-msg {
+      font-size: 0.8rem;
+      color: var(--success);
+    }
+  </style>
 </head>
 <body>
   <div id="topbar"></div>
 
-  <main class="container">
+  <main class="container" style="padding-bottom:40px">
     <h1 class="section-title mt-0">Working hours</h1>
     <div id="alert"></div>
 
     <div class="card">
       <h2>Set your weekly availability</h2>
-      <p class="sub">Times use a 24-hour clock (HH:MM). Leave a day blank to mark it as a day off. An optional break (e.g. lunch) is excluded from available slots.</p>
+      <p class="sub">
+        Choose your start and end times using the AM/PM selectors.
+        Leave a day unset to mark it as a day off.
+        The optional break (e.g. lunch) is excluded from customer slots.
+      </p>
       <div id="daysWrap" class="stack mt-4"></div>
       <div class="alert info" style="font-size:0.82rem;margin-top:16px">
-        Slots are generated per service duration within these hours, minus any breaks and existing active bookings.
+        Slots are generated per service duration within these hours,
+        minus any breaks and existing active bookings.
       </div>
     </div>
   </main>
