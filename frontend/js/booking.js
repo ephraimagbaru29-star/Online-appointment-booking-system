@@ -1,163 +1,261 @@
 import { initPage } from './auth.js';
-import { api, ApiError } from './api.js';
+import { api } from './api.js';
 import { toast, formatDate, formatTime, escapeHtml } from './ui.js';
 
 const profile = await initPage({ activePath: '/customer/book.html' });
 if (profile) run();
 
+// ---- Duration formatting (matches services.js) ----
+function durationLabel(totalMinutes) {
+  const totalSec = Math.round(totalMinutes * 60);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  const parts = [];
+  if (h) parts.push(`${h} hr`);
+  if (m) parts.push(`${m} min`);
+  if (s) parts.push(`${s} sec`);
+  return parts.length ? parts.join(' ') : '0 min';
+}
+
 async function run() {
-  const alertEl = document.getElementById('alert');
-  const serviceSel = document.getElementById('service');
-  const providerSel = document.getElementById('provider');
-  const serviceDetail = document.getElementById('serviceDetail');
-  const dateInput = document.getElementById('date');
-  const slotsWrap = document.getElementById('slotsWrap');
-  const slotsEl = document.getElementById('slots');
-  const slotMeta = document.getElementById('slotMeta');
-  const noSlots = document.getElementById('noSlots');
-  const confirmCard = document.getElementById('confirmCard');
-  const confirmSummary = document.getElementById('confirmSummary');
-  const noteEl = document.getElementById('note');
-  const bookBtn = document.getElementById('bookBtn');
-  const changeBtn = document.getElementById('changeBtn');
+  // ---- DOM refs ----
+  const alertEl       = document.getElementById('alert');
+  const step1El       = document.getElementById('step1');
+  const step2El       = document.getElementById('step2');
+  const step3El       = document.getElementById('step3');
+  const step4El       = document.getElementById('step4');
+  const step1pill     = document.getElementById('step1pill');
+  const step2pill     = document.getElementById('step2pill');
+  const step3pill     = document.getElementById('step3pill');
+  const step4pill     = document.getElementById('step4pill');
+  const serviceList   = document.getElementById('serviceList');
+  const step2sub      = document.getElementById('step2sub');
+  const providerSel   = document.getElementById('provider');
+  const dateInput     = document.getElementById('date');
+  const slotGrid      = document.getElementById('slotGrid');
+  const slotMeta      = document.getElementById('slotMeta');
+  const noSlots       = document.getElementById('noSlots');
+  const bookBar       = document.getElementById('bookBar');
+  const bookSummaryTitle  = document.getElementById('bookSummaryTitle');
+  const bookSummaryDetail = document.getElementById('bookSummaryDetail');
+  const noteEl        = document.getElementById('note');
+  const bookNowBtn    = document.getElementById('bookNowBtn');
+  const changeSlotBtn = document.getElementById('changeSlotBtn');
 
-  let services = [];
-  let providers = [];
-  let selectedSlot = null;
+  // ---- State ----
+  let services       = [];
+  let providers      = [];
+  let selectedService = null;
+  let selectedProvider = null;
+  let selectedSlot   = null;
 
-  function alert(message, type = 'error') {
-    alertEl.innerHTML = `<div class="alert ${type}">${escapeHtml(message)}</div>`;
+  // ---- Step pill helpers ----
+  function setStepPills(active) {
+    const pills = [step1pill, step2pill, step3pill, step4pill];
+    pills.forEach((p, i) => {
+      p.classList.remove('active', 'done');
+      if (i + 1 < active) p.classList.add('done');
+      if (i + 1 === active) p.classList.add('active');
+    });
   }
 
-  // Set the date input's minimum to today.
-  const todayStr = new Date().toISOString().slice(0, 10);
-  dateInput.min = todayStr;
+  function showAlert(msg, type = 'error') {
+    alertEl.innerHTML = `<div class="alert ${type}">${escapeHtml(msg)}</div>`;
+  }
 
-  // Load services + providers in parallel.
-  const [servicesRes, providersRes] = await Promise.all([
+  // ---- Date min ----
+  dateInput.min = new Date().toISOString().slice(0, 10);
+
+  // ---- Load services + providers in parallel ----
+  const [svcRes, provRes] = await Promise.all([
     api.get('/services').catch(() => null),
     api.get('/availability/providers').catch(() => null),
   ]);
 
-  services = servicesRes?.services || [];
-  providers = providersRes?.providers || [];
+  services  = svcRes?.services   || [];
+  providers = provRes?.providers || [];
 
   if (!services.length) {
-    serviceSel.innerHTML = '<option value="">No services available yet</option>';
-    serviceDetail.textContent = 'Please check back later or contact the provider.';
+    serviceList.innerHTML =
+      '<div class="alert info">No services are available yet. Please check back later.</div>';
     return;
   }
 
-  serviceSel.innerHTML =
-    '<option value="">Select a service…</option>' +
-    services.map((s) => `<option value="${s.id}">${escapeHtml(s.name)} · ${s.duration_minutes} min</option>`).join('');
+  // ---- Render service cards ----
+  serviceList.innerHTML = services
+    .map(
+      (s) => `
+      <div class="service-card" data-id="${s.id}" role="button" tabindex="0"
+           aria-label="${escapeHtml(s.name)}">
+        <div class="svc-name">${escapeHtml(s.name)}</div>
+        <div class="svc-desc">${escapeHtml(s.description || '')}</div>
+        <span class="svc-dur">⏱ ${durationLabel(s.duration_minutes)}</span>
+      </div>`
+    )
+    .join('');
 
-  if (!providers.length) {
-    providerSel.innerHTML = '<option value="">No providers available</option>';
-  } else {
-    providerSel.innerHTML =
-      '<option value="">Select a provider…</option>' +
-      providers.map((p) => `<option value="${p.id}">${escapeHtml(p.full_name || p.email)}</option>`).join('');
+  serviceList.querySelectorAll('.service-card').forEach((card) => {
+    const activate = () => pickService(card.dataset.id);
+    card.addEventListener('click', activate);
+    card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') activate(); });
+  });
+
+  // ---- Step 1 → pick a service ----
+  function pickService(id) {
+    selectedService  = services.find((s) => s.id === id);
+    selectedProvider = null;
+    selectedSlot     = null;
+    alertEl.innerHTML = '';
+
+    // Highlight selected card
+    serviceList.querySelectorAll('.service-card').forEach((c) => {
+      c.classList.toggle('selected', c.dataset.id === id);
+    });
+
+    // Populate provider dropdown
+    step2sub.textContent = `You selected: ${selectedService.name} · ${durationLabel(selectedService.duration_minutes)}`;
+    if (!providers.length) {
+      providerSel.innerHTML = '<option value="">No providers available yet</option>';
+    } else {
+      providerSel.innerHTML =
+        '<option value="">Select a provider…</option>' +
+        providers
+          .map((p) => `<option value="${p.id}">${escapeHtml(p.full_name || p.email)}</option>`)
+          .join('');
+    }
+
+    // Show step 2, hide later steps
+    step2El.classList.remove('hidden');
+    step3El.classList.add('hidden');
+    step4El.classList.add('hidden');
+    bookBar.classList.add('hidden');
+    setStepPills(2);
+    step2El.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  serviceSel.addEventListener('change', () => {
-    const s = services.find((x) => x.id === serviceSel.value);
-    serviceDetail.innerHTML = s
-      ? `${escapeHtml(s.description || '')} <span class="muted">· ${s.duration_minutes} minutes</span>`
-      : '';
-    maybeLoadSlots();
+  // ---- Step 2 → pick a provider ----
+  providerSel.addEventListener('change', () => {
+    selectedProvider = providers.find((p) => p.id === providerSel.value) || null;
+    selectedSlot     = null;
+    bookBar.classList.add('hidden');
+
+    if (!selectedProvider) {
+      step3El.classList.add('hidden');
+      step4El.classList.add('hidden');
+      return;
+    }
+
+    // Show step 3
+    dateInput.value = '';
+    step3El.classList.remove('hidden');
+    step4El.classList.add('hidden');
+    setStepPills(3);
+    step3El.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   });
-  providerSel.addEventListener('change', maybeLoadSlots);
-  dateInput.addEventListener('change', maybeLoadSlots);
 
-  async function maybeLoadSlots() {
-    selectedSlot = null;
-    confirmCard.classList.add('hidden');
-    const serviceId = serviceSel.value;
-    const providerId = providerSel.value;
+  // ---- Step 3 → pick a date ----
+  dateInput.addEventListener('change', async () => {
     const date = dateInput.value;
-    if (!serviceId || !providerId || !date) return;
+    if (!date || !selectedService || !selectedProvider) return;
+    selectedSlot = null;
+    bookBar.classList.add('hidden');
+    await loadSlots(date);
+  });
 
-    slotsWrap.classList.remove('hidden');
+  // ---- Step 4: load + render slots ----
+  async function loadSlots(date) {
+    step4El.classList.remove('hidden');
     noSlots.classList.add('hidden');
-    slotsEl.innerHTML = '<span class="muted">Loading slots…</span>';
+    slotGrid.innerHTML = '<span class="muted">Loading available times…</span>';
     slotMeta.textContent = '';
+    setStepPills(4);
+    step4El.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
     try {
-      const { slots } = await api.get(`/slots?serviceId=${encodeURIComponent(serviceId)}&providerId=${encodeURIComponent(providerId)}&date=${encodeURIComponent(date)}`);
-      slotMeta.textContent = `${formatDate(date)} (${slots.length} open)`;
+      const { slots } = await api.get(
+        `/slots?serviceId=${encodeURIComponent(selectedService.id)}` +
+        `&providerId=${encodeURIComponent(selectedProvider.id)}` +
+        `&date=${encodeURIComponent(date)}`
+      );
+
+      if (!slots.length) {
+        slotGrid.innerHTML = '';
+        noSlots.classList.remove('hidden');
+        slotMeta.textContent = formatDate(date + 'T00:00:00');
+        return;
+      }
+
+      slotMeta.textContent = `${formatDate(date + 'T00:00:00')} · ${slots.length} slot${slots.length !== 1 ? 's' : ''} available`;
       renderSlots(slots);
     } catch (err) {
-      slotsEl.innerHTML = `<span class="muted">${escapeHtml(err.message || 'Could not load slots.')}</span>`;
+      slotGrid.innerHTML = `<span class="muted">${escapeHtml(err.message || 'Could not load slots.')}</span>`;
     }
   }
 
   function renderSlots(slots) {
-    if (!slots.length) {
-      slotsWrap.classList.add('hidden');
-      noSlots.classList.remove('hidden');
-      return;
-    }
     noSlots.classList.add('hidden');
-    slotsWrap.classList.remove('hidden');
-    slotsEl.innerHTML = slots
+    slotGrid.innerHTML = slots
       .map(
         (s, i) =>
-          `<button type="button" class="slot" data-i="${i}" data-start="${s.start}">${formatTime(s.start)}</button>`
+          `<button type="button" class="slot-btn" data-i="${i}"
+            aria-label="Book ${formatTime(s.start)}">
+            ${formatTime(s.start)}<br/>
+            <span style="font-size:0.72rem;font-weight:400;opacity:.75">${formatTime(s.end)}</span>
+          </button>`
       )
       .join('');
-    slotsEl.querySelectorAll('.slot').forEach((el) => {
-      el.addEventListener('click', () => selectSlot(el, slots));
+
+    slotGrid.querySelectorAll('.slot-btn').forEach((btn) => {
+      btn.addEventListener('click', () => pickSlot(btn, slots));
     });
   }
 
-  function selectSlot(el, slots) {
-    slotsEl.querySelectorAll('.slot').forEach((s) => s.classList.remove('selected'));
-    el.classList.add('selected');
-    selectedSlot = slots[Number(el.dataset.i)];
-    showConfirm();
+  // ---- Slot selected → show Book Now bar ----
+  function pickSlot(btn, slots) {
+    slotGrid.querySelectorAll('.slot-btn').forEach((b) => b.classList.remove('picked'));
+    btn.classList.add('picked');
+    selectedSlot = slots[Number(btn.dataset.i)];
+
+    bookSummaryTitle.textContent =
+      `${selectedService.name} with ${selectedProvider.full_name || selectedProvider.email}`;
+    bookSummaryDetail.textContent =
+      `${formatDate(selectedSlot.start)} · ${formatTime(selectedSlot.start)} – ${formatTime(selectedSlot.end)}`;
+
+    bookBar.classList.remove('hidden');
+    bookBar.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  function showConfirm() {
-    if (!selectedSlot) return;
-    const s = services.find((x) => x.id === serviceSel.value);
-    const p = providers.find((x) => x.id === providerSel.value);
-    confirmSummary.innerHTML = `
-      <strong>${escapeHtml(s?.name || '')}</strong> with
-      <strong>${escapeHtml(p?.full_name || p?.email || '')}</strong><br />
-      ${formatDate(selectedSlot.start)} · ${formatTime(selectedSlot.start)} – ${formatTime(selectedSlot.end)}`;
-    confirmCard.classList.remove('hidden');
-    confirmCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-
-  changeBtn.addEventListener('click', () => {
+  // ---- Change slot ----
+  changeSlotBtn.addEventListener('click', () => {
     selectedSlot = null;
-    confirmCard.classList.add('hidden');
-    slotsEl.querySelectorAll('.slot').forEach((s) => s.classList.remove('selected'));
+    slotGrid.querySelectorAll('.slot-btn').forEach((b) => b.classList.remove('picked'));
+    bookBar.classList.add('hidden');
+    noteEl.value = '';
   });
 
-  bookBtn.addEventListener('click', async () => {
+  // ---- Book Now ----
+  bookNowBtn.addEventListener('click', async () => {
     if (!selectedSlot) return;
-    bookBtn.disabled = true;
-    bookBtn.textContent = 'Booking…';
+
+    bookNowBtn.disabled = true;
+    bookNowBtn.innerHTML = '<span class="spinner"></span> Booking…';
+
     try {
-      const data = await api.post('/appointments', {
-        service_id: serviceSel.value,
-        provider_id: providerSel.value,
-        start: selectedSlot.start,
+      await api.post('/appointments', {
+        service_id:    selectedService.id,
+        provider_id:   selectedProvider.id,
+        start:         selectedSlot.start,
         customer_note: noteEl.value.trim() || null,
       });
-      toast('Booking confirmed — status: Pending', 'success');
-      // Show reference and redirect to dashboard.
-      setTimeout(() => {
-        window.location.href = '/customer/dashboard.html';
-      }, 900);
+      toast('Appointment booked — status: Pending', 'success');
+      setTimeout(() => { window.location.href = '/customer/dashboard.html'; }, 900);
     } catch (err) {
-      alert(err.message || 'Booking failed.');
-      bookBtn.disabled = false;
-      bookBtn.textContent = 'Confirm booking';
-      // Reload slots as the chosen one may now be taken.
-      maybeLoadSlots();
+      showAlert(err.message || 'Booking failed. Please try again.');
+      bookNowBtn.disabled = false;
+      bookNowBtn.innerHTML = '🗓 Book Now';
+      // Reload slots — the picked one may now be taken.
+      await loadSlots(dateInput.value);
     }
   });
 }

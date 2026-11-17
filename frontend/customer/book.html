@@ -6,68 +6,176 @@
   <title>Book an Appointment</title>
   <link rel="stylesheet" href="/css/styles.css" />
   <script src="/js/config.js"></script>
+  <style>
+    /* ---- Service cards ---- */
+    .service-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 10px;
+    }
+    .service-card {
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: var(--surface);
+    }
+    .service-card:hover { border-color: var(--primary); background: var(--primary-soft); }
+    .service-card.selected { border-color: var(--primary); background: var(--primary-soft); }
+    .service-card .svc-name { font-weight: 700; font-size: 0.98rem; margin-bottom: 4px; }
+    .service-card .svc-desc { font-size: 0.8rem; color: var(--muted); margin-bottom: 8px; min-height: 18px; }
+    .service-card .svc-dur  {
+      display: inline-block;
+      background: var(--surface-2);
+      border-radius: 999px;
+      padding: 2px 10px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--primary);
+    }
+    .service-card.selected .svc-dur { background: rgba(255,255,255,0.6); }
+
+    /* ---- Slot grid ---- */
+    .slot-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .slot-btn {
+      border: 2px solid var(--border);
+      background: var(--surface);
+      border-radius: 9px;
+      padding: 10px 6px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: all 0.12s;
+    }
+    .slot-btn:hover  { border-color: var(--primary); background: var(--primary-soft); }
+    .slot-btn.picked { border-color: var(--primary); background: var(--primary); color: #fff; }
+
+    /* ---- Book now bar ---- */
+    .book-bar {
+      background: var(--surface);
+      border: 2px solid var(--primary);
+      border-radius: 12px;
+      padding: 18px 20px;
+      margin-top: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .book-bar .summary { font-size: 0.95rem; line-height: 1.5; }
+    .book-bar .summary strong { display: block; font-size: 1.05rem; }
+    .book-now-btn {
+      font-size: 1rem;
+      padding: 12px 28px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* ---- Step indicators ---- */
+    .step-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 20px;
+    }
+    .step-pill {
+      flex: 1;
+      text-align: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 7px 4px;
+      border-radius: 999px;
+      background: var(--surface-2);
+      color: var(--muted);
+      border: 1.5px solid var(--border);
+    }
+    .step-pill.done   { background: var(--success-soft); color: var(--success); border-color: var(--success); }
+    .step-pill.active { background: var(--primary-soft); color: var(--primary); border-color: var(--primary); }
+  </style>
 </head>
 <body>
   <div id="topbar"></div>
 
-  <main class="container">
+  <main class="container" style="padding-bottom:40px">
     <h1 class="section-title">Book an appointment</h1>
 
-    <ol class="steps">
-      <li class="active">Service</li>
-      <li>Date</li>
-      <li>Time</li>
-      <li>Confirm</li>
-    </ol>
+    <!-- Step indicators -->
+    <div class="step-row">
+      <div class="step-pill active" id="step1pill">1 · Service</div>
+      <div class="step-pill" id="step2pill">2 · Provider</div>
+      <div class="step-pill" id="step3pill">3 · Date</div>
+      <div class="step-pill" id="step4pill">4 · Time</div>
+    </div>
 
     <div id="alert"></div>
 
-    <div class="card">
+    <!-- Step 1: pick a service -->
+    <div class="card" id="step1">
       <h2>Choose a service</h2>
-      <p class="sub">Select the service you'd like to book.</p>
-      <div class="form-grid">
-        <div class="field">
-          <label for="service">Service</label>
-          <select id="service"><option value="">Loading services…</option></select>
-        </div>
-        <div class="field">
-          <label for="provider">Provider</label>
-          <select id="provider"><option value="">Loading providers…</option></select>
-        </div>
-        <div id="serviceDetail" class="muted" style="font-size:0.88rem"></div>
+      <p class="sub">Tap the service you'd like to book.</p>
+      <div id="serviceList" class="service-list">
+        <div class="muted">Loading services…</div>
       </div>
     </div>
 
-    <div class="card">
-      <h2>Pick a date &amp; time</h2>
-      <p class="sub">Available slots are based on the provider's working hours and existing bookings.</p>
-      <div class="field" style="max-width:240px">
+    <!-- Step 2: pick a provider -->
+    <div class="card hidden" id="step2">
+      <h2>Choose a provider</h2>
+      <p class="sub" id="step2sub"></p>
+      <div class="field" style="max-width:320px">
+        <label for="provider">Provider</label>
+        <select id="provider"><option value="">Select a provider…</option></select>
+      </div>
+    </div>
+
+    <!-- Step 3: pick a date -->
+    <div class="card hidden" id="step3">
+      <h2>Choose a date</h2>
+      <p class="sub">Slots are shown based on the provider's working hours.</p>
+      <div class="field" style="max-width:220px">
         <label for="date">Date</label>
         <input id="date" type="date" />
       </div>
-      <div id="slotsWrap" class="mt-4 hidden">
-        <div class="between">
-          <strong>Available times</strong>
-          <span id="slotMeta" class="muted" style="font-size:0.82rem"></span>
-        </div>
-        <div id="slots" class="slots mt-2"></div>
-      </div>
-      <div id="noSlots" class="empty hidden">
-        <div class="big">🗓️</div>
-        <div>No available slots for this date. Try another day.</div>
-      </div>
     </div>
 
-    <div class="card hidden" id="confirmCard">
-      <h2>Confirm your booking</h2>
-      <p class="sub" id="confirmSummary"></p>
-      <div class="field">
-        <label for="note">Note for the provider (optional)</label>
-        <textarea id="note" rows="3" maxlength="500" placeholder="Anything we should know?"></textarea>
+    <!-- Step 4: pick a time slot + Book Now -->
+    <div class="card hidden" id="step4">
+      <div class="between">
+        <h2 style="margin:0">Available times</h2>
+        <span id="slotMeta" class="muted" style="font-size:0.82rem"></span>
       </div>
-      <div class="mt-4">
-        <button class="btn" id="bookBtn">Confirm booking</button>
-        <button class="btn secondary" id="changeBtn">Change time</button>
+      <div id="slotGrid" class="slot-grid"></div>
+
+      <div id="noSlots" class="empty hidden" style="padding:24px 0">
+        <div style="font-size:1.8rem">🗓️</div>
+        <div class="mt-2">No open slots for this date. Try a different day.</div>
+      </div>
+
+      <!-- Book Now bar — appears after a slot is selected -->
+      <div id="bookBar" class="book-bar hidden">
+        <div class="summary">
+          <strong id="bookSummaryTitle"></strong>
+          <span id="bookSummaryDetail"></span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+          <div class="field" style="margin:0;width:260px">
+            <label for="note" style="font-size:0.8rem">Note for provider (optional)</label>
+            <textarea id="note" rows="2" maxlength="500"
+              placeholder="Anything we should know?" style="font-size:0.85rem"></textarea>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn ghost sm" id="changeSlotBtn">Change slot</button>
+            <button class="btn book-now-btn" id="bookNowBtn">🗓 Book Now</button>
+          </div>
+        </div>
       </div>
     </div>
   </main>
